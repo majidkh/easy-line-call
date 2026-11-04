@@ -193,6 +193,35 @@ void main() {
     expect(find.byType(ChallengePage), findsOneWidget);
   });
 
+  testWidgets('video playback never holds for the trailing scan',
+      (t) async {
+    final clip = await _stageClip();
+    await t.pumpWidget(MaterialApp(
+        home: TrackPage(
+            calibration: _fakeCal(), videoPath: clip, doubles: true)));
+    // Wait for the analysis to start (model warmup on first run).
+    await _pumpUntil(t, find.textContaining('Analyzing'),
+        const Duration(seconds: 2), 150);
+    expect(find.textContaining('Analyzing'), findsOneWidget);
+    // The 6s/60fps clip outruns the ~21fps analysis within the first
+    // second; the old pacing held playback here ('holding…'). Let the
+    // video play well past the frontier, then check it was never held.
+    final t0 = DateTime.now();
+    while (DateTime.now().difference(t0) < const Duration(seconds: 7)) {
+      await Future.delayed(const Duration(milliseconds: 500));
+      await t.pump(const Duration(milliseconds: 100));
+    }
+    expect(find.textContaining('Analyzing'), findsOneWidget,
+        reason: 'scan still trailing (6s clip takes ~17s to analyze)');
+    expect(find.textContaining('holding'), findsNothing,
+        reason: 'playback never holds for the analysis');
+    // To the end: the scan completes after the video ended, offering a
+    // replay with the full calls on screen.
+    await _pumpUntil(t, find.text('Replay with calls'),
+        const Duration(seconds: 2), 90);
+    expect(find.text('Replay with calls'), findsOneWidget);
+  });
+
   testWidgets('live challenge browser over a 3-minute buffer', (t) async {
     final buf = LiveBuffer();
     final rgba = Uint8List(320 * 180 * 4);

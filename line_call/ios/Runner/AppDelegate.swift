@@ -230,7 +230,6 @@ final class VideoReaderSession: @unchecked Sendable {
             "bytes": FlutterStandardTypedData(bytes: Data(buf))]
   }
 }
-}
 /// Device built-in 2x upscale (MetalFX spatial scaler): one GPU pass per
 /// crop — milliseconds, versus the hundreds of TFLite tile inferences the
 /// challenge review used to wait on. The Dart magnifier shows the 2x tile

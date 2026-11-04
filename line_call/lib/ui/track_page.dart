@@ -1,15 +1,15 @@
 // Tracking screen (landscape).
 //
-// Video: playback and analysis run together — the video plays from the
-// start while the reader feeds the engine, paced to the analysis frontier
-// so playback never shows frames the engine hasn't analyzed yet, with ball
-// dots/trails, bounce rings and the calibrated court drawn over it live.
+// Video: playback and analysis run decoupled — the video plays from the
+// start at full speed and never stutters for the engine, while the reader
+// feeds the engine alongside. Ball dots/trails, bounce rings and the
+// calibrated court draw over the play as each chunk completes, trailing
+// the play position until the scan catches up.
 // Live: the camera preview processes in real time into the same display.
 //
 // Right side, floating over the video: Challenge button, then the bounce
 // list with timestamps. Tapping a bounce opens the challenge review for it.
 import 'dart:async';
-import 'dart:math' as math;
 import 'dart:typed_data';
 
 import 'package:camera/camera.dart';
@@ -69,17 +69,12 @@ class _TrackPageState extends State<TrackPage> {
   double _scanProgress = 0; // video only (ms / duration)
   String? _error;
 
-  // Video playback.
+  // Video playback. Runs free at full speed — never holds for the
+  // analysis, which trails in [_latest] and catches up in the background.
   VideoPlayerController? _player;
   double _videoDurMs = 0;
   double _playMs = 0;
   Timer? _playTimer;
-  // Playback leads/lags the analysis frontier (ms). The player pauses
-  // within [_pauseLeadMs] of unanalyzed video and resumes once the
-  // engine is [_resumeLeadMs] ahead — hysteresis against flutter.
-  static const double _pauseLeadMs = 400;
-  static const double _resumeLeadMs = 1200;
-  bool _waitingForScan = false;
 
   // Live camera.
   CameraController? _cam;
@@ -128,12 +123,11 @@ class _TrackPageState extends State<TrackPage> {
   }
 
   // ------------------------------------------------------------ video
-  // Playback and analysis run together: the video plays from the start
-  // while the reader feeds the engine as fast as it decodes, paced to the
-  // analysis frontier (the player holds when it would outrun analyzed
-  // frames, and resumes once the engine pulls ahead). Overlays show
-  // everything analyzed up to the frame on screen, so balls, bounces and
-  // trajectories appear live as the play reaches them.
+  // Playback and analysis run decoupled: the video plays from the start
+  // at full speed while the reader feeds the engine as fast as it
+  // decodes. Overlays show everything analyzed up to the frame on
+  // screen, so balls, bounces and trajectories trail the play position
+  // and fill in as each chunk completes — the video never stutters.
   Future<void> _startVideo(String path) async {
     final t0 = DateTime.now();
     void mark(String m) => debugPrint(
@@ -163,22 +157,8 @@ class _TrackPageState extends State<TrackPage> {
       if (_videoDurMs > 0 && pos >= _videoDurMs) {
         player.pause(); // freeze on the last frame, overlays intact
       }
-      // Pace playback to the analysis frontier: never show frames the
-      // engine hasn't analyzed yet, so balls, bounces and trajectories
-      // render live as the play reaches them.
-      if (!_scanDone && _videoDurMs > 0 && pos < _videoDurMs) {
-        final frontier = _frontierMs;
-        if (player.value.isPlaying && pos > frontier - _pauseLeadMs) {
-          player.pause();
-          _waitingForScan = true;
-        } else if (_waitingForScan && frontier - pos > _resumeLeadMs) {
-          player.play();
-          _waitingForScan = false;
-        }
-      } else if (_scanDone && _waitingForScan) {
-        player.play();
-        _waitingForScan = false;
-      }
+      // No pacing: the analysis trails in the background (see
+      // _scanStatusRow) and its overlays appear as chunks complete.
       setState(() {
         _playMs = pos;
       });
@@ -413,14 +393,6 @@ class _TrackPageState extends State<TrackPage> {
   }
 
   // ------------------------------------------------------------ derived data
-  /// Video time (ms) analyzed so far — the scan frontier — or 0 before
-  /// the first engine update. Playback never runs past this.
-  double get _frontierMs {
-    final u = _latest;
-    if (u == null || u.frontier <= 0 || _scanMs.isEmpty) return 0;
-    return _scanMs[math.min(u.frontier, _scanMs.length) - 1];
-  }
-
   /// Scan index currently shown (playback position, or the live frontier).
   int get _shownIdx {
     if (_scanMs.isEmpty) return 0;
@@ -535,6 +507,7 @@ class _TrackPageState extends State<TrackPage> {
     final nowMs = widget.live && _scanMs.isNotEmpty ? _scanMs.last : null;
     final court = numberedBounces(bounces, idx, 10,
         widget.live ? _scanMs : null, nowMs);
+    final statusRow = _scanStatusRow();
     // Full-bleed video for small phone screens; the Challenge button and
     // bounce list float over it, half transparent.
     return Stack(
@@ -580,17 +553,13 @@ class _TrackPageState extends State<TrackPage> {
                 ),
               ),
               // No bounce list under Challenge — the numbered court rings
-              // are the bounce UI (tap a ring to review). Only the
-              // analysis progress shows, while a video scan is running.
-              if (_scanStatus() != null)
+              // are the bounce UI (tap a ring to review). Under it: the
+              // analysis progress while a video scan trails playback,
+              // then a replay button once the video ended with full calls.
+              if (statusRow != null)
                 Padding(
-                  padding:
-                      const EdgeInsets.only(left: 8, top: 6),
-                  child: Text(_scanStatus()!,
-                      style: const TextStyle(
-                          color: Colors.white70,
-                          fontSize: 12,
-                          shadows: [_shadow])),
+                  padding: const EdgeInsets.only(left: 8, top: 6),
+                  child: statusRow,
                 ),
               const Spacer(flex: 1),
             ],
@@ -649,17 +618,41 @@ class _TrackPageState extends State<TrackPage> {
   static const _shadow = Shadow(
       color: Colors.black, blurRadius: 4, offset: Offset(0, 1));
 
-  // Analysis progress line (video scans only), or null when there is
+  // Analysis progress row (video scans only), or null when there is
   // nothing to report — the panel otherwise holds just the Challenge
-  // button. Before the engine exists the scan hasn't started (model
-  // still loading) — say so instead of a stuck "analyzing 0%".
-  String? _scanStatus() {
-    if (widget.live || _scanDone) return null;
-    var s = _scan == null
-        ? 'Loading ball model…'
-        : 'Analyzing ${(_scanProgress * 100).round()}%';
-    if (_waitingForScan) s += ' · holding…';
-    return s;
+  // button. While the scan trails playback it reports the percent (the
+  // overlays fill in as chunks complete); before the engine exists the
+  // scan hasn't started (model still loading) — say so instead of a
+  // stuck "analyzing 0%". Once the video has ended AND the scan is
+  // done, offer a replay with the full calls on screen.
+  Widget? _scanStatusRow() {
+    if (widget.live) return null;
+    if (!_scanDone) {
+      final s = _scan == null
+          ? 'Loading ball model…'
+          : 'Analyzing ${(_scanProgress * 100).round()}%';
+      return Text(s,
+          style: const TextStyle(
+              color: Colors.white70, fontSize: 12, shadows: [_shadow]));
+    }
+    final player = _player;
+    final ended = player != null &&
+        _videoDurMs > 0 &&
+        _playMs >= _videoDurMs;
+    if (!ended) return null;
+    return TextButton.icon(
+      onPressed: _replay,
+      icon: const Icon(Icons.replay, size: 16),
+      label: const Text('Replay with calls',
+          style: TextStyle(fontSize: 12)),
+    );
+  }
+
+  Future<void> _replay() async {
+    final player = _player;
+    if (player == null) return;
+    await player.seekTo(Duration.zero);
+    await player.play();
   }
 }
 

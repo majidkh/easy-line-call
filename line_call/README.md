@@ -34,7 +34,7 @@ From the repo root:
 
 ```sh
 ./build_linecall.sh                 # macOS app, release, run it
-./build_linecall.sh ios             # refresh Xcode project, open it (sign + run in Xcode)
+./build_linecall.sh ios             # build + install on the connected iPhone
 ./build_linecall.sh android --no-run  # release APK, no launch
 ./build_linecall.sh web             # release, serve on Chrome
 ./build_linecall.sh --help          # clean / --no-run / --debug / bundle

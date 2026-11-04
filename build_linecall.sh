@@ -6,18 +6,20 @@
 #
 #   target   mac (default), ios, android, web
 #   clean    full `flutter clean` first (default: incremental, like SetMatch)
-#   --no-run build only, don't launch (mac/android) or serve (web);
-#            ios: generate the Xcode project but don't open Xcode
+#   --no-run build only, don't launch (mac/android), serve (web) or
+#            install (ios)
 #   --debug  debug build (default: release)
 #   bundle   android only: build a store .aab instead of an installable .apk
 #
-# The ios target does NOT build or sign: it refreshes the Xcode project
-# (`flutter build ios --config-only` + `pod install`) and opens
-# ios/Runner.xcworkspace in Xcode, where signing (team, bundle id,
-# provisioning) and the device run happen.
+# The ios target builds and installs straight onto the connected iPhone
+# (`flutter install`) — no Xcode round-trip. Signing uses the development
+# team stored in the Xcode project. For manual signing/provisioning work,
+# open ios/Runner.xcworkspace in Xcode yourself.
 #
 # Environment:
 #   FLUTTER_SDK  Flutter SDK root (default: `flutter` from PATH)
+#   IOS_DEVICE   iOS device id for the ios target (default: auto-detect
+#                the connected iPhone)
 #   ANDROID_HOME Android SDK for the android target
 #                (default: ~/Library/Android/sdk)
 #
@@ -39,7 +41,7 @@ usage() {
   sed -n '2,26p' "$0"
   echo "Examples:"
   echo "  ./build_linecall.sh              # macOS app, release, run it"
-  echo "  ./build_linecall.sh ios          # refresh Xcode project, open it"
+  echo "  ./build_linecall.sh ios          # build + install on the iPhone"
   echo "  ./build_linecall.sh android --no-run   # release APK, no launch"
   echo "  ./build_linecall.sh web clean    # web, clean rebuild, serve on Chrome"
 }
@@ -101,15 +103,31 @@ case "$TARGET" in
     fi
     ;;
   ios)
-    # Xcode owns the iOS build: refresh the project files, then hand off.
-    # Signing, devices and running all happen in Xcode — nothing Apple-ID
-    # related lives in this script.
-    "$FLUTTER" build ios --config-only
+    # Direct on-device install: build, sign (development team is stored
+    # in the Xcode project) and install onto the connected iPhone — no
+    # Xcode round-trip.
     if [ "$RUN" = true ]; then
-      echo "==> opening ios/Runner.xcworkspace in Xcode"
-      open "$APP/ios/Runner.xcworkspace"
+      if [ -z "${IOS_DEVICE:-}" ]; then
+        IOS_DEVICE="$("$FLUTTER" devices --machine 2>/dev/null | python3 -c "
+import json, sys
+try:
+    ds = json.load(sys.stdin)
+except Exception:
+    ds = []
+for d in ds:
+    if str(d.get('targetPlatform', '')).startswith('ios'):
+        print(d.get('id', ''))
+        break
+")"
+      fi
+      if [ -z "$IOS_DEVICE" ]; then
+        echo "error: no iOS device connected (connect an iPhone, set IOS_DEVICE, or use --no-run for a build-only)" >&2
+        exit 1
+      fi
+      echo "==> installing on iOS device $IOS_DEVICE"
+      "$FLUTTER" install -d "$IOS_DEVICE" "$MODE_FLAG"
     else
-      echo "==> Xcode project refreshed (--no-run: not opening Xcode)"
+      "$FLUTTER" build ios "$MODE_FLAG"
     fi
     ;;
   android)
