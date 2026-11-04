@@ -18,6 +18,8 @@ class MuseEngineConfig {
   final String modelPath, compileCache;
   final bool courtFilter;
   final int chunk, stride;
+  final bool adaptiveStride;
+  final int sparseStride;
   const MuseEngineConfig({
     required this.fps,
     required this.procW,
@@ -29,6 +31,8 @@ class MuseEngineConfig {
     this.courtFilter = true,
     this.chunk = 24,
     this.stride = 3,
+    this.adaptiveStride = false,
+    this.sparseStride = 9,
   });
 }
 
@@ -120,6 +124,8 @@ void _worker((MuseEngineConfig, SendPort) args) {
       chunk: cfg.chunk,
       stride: cfg.stride,
       courtFilter: cfg.courtFilter,
+      adaptiveStride: cfg.adaptiveStride,
+      sparseStride: cfg.sparseStride,
     );
   } catch (e) {
     det?.close();

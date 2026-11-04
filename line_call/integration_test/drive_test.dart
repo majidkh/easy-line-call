@@ -193,7 +193,7 @@ void main() {
     expect(find.byType(ChallengePage), findsOneWidget);
   });
 
-  testWidgets('video playback never holds for the trailing scan',
+  testWidgets('video playback holds at the analysis frontier',
       (t) async {
     final clip = await _stageClip();
     await t.pumpWidget(MaterialApp(
@@ -204,21 +204,25 @@ void main() {
         const Duration(seconds: 2), 150);
     expect(find.textContaining('Analyzing'), findsOneWidget);
     // The 6s/60fps clip outruns the ~21fps analysis within the first
-    // second; the old pacing held playback here ('holding…'). Let the
-    // video play well past the frontier, then check it was never held.
-    final t0 = DateTime.now();
-    while (DateTime.now().difference(t0) < const Duration(seconds: 7)) {
+    // second, so playback must hold for the scan (footage and tracking
+    // stay in sync) instead of running ahead. Holding is intermittent
+    // (play bursts between holds), so poll until it shows.
+    var held = false;
+    for (var i = 0;
+        i < 20 && find.textContaining('holding').evaluate().isEmpty;
+        i++) {
       await Future.delayed(const Duration(milliseconds: 500));
       await t.pump(const Duration(milliseconds: 100));
     }
+    held = find.textContaining('holding').evaluate().isNotEmpty;
     expect(find.textContaining('Analyzing'), findsOneWidget,
-        reason: 'scan still trailing (6s clip takes ~17s to analyze)');
-    expect(find.textContaining('holding'), findsNothing,
-        reason: 'playback never holds for the analysis');
-    // To the end: the scan completes after the video ended, offering a
-    // replay with the full calls on screen.
+        reason: 'scan still running (6s clip takes ~17s to analyze)');
+    expect(held, isTrue,
+        reason: 'playback holds at the analysis frontier');
+    // To the end: scan and video finish together, offering a replay
+    // with the full calls on screen.
     await _pumpUntil(t, find.text('Replay with calls'),
-        const Duration(seconds: 2), 90);
+        const Duration(seconds: 2), 120);
     expect(find.text('Replay with calls'), findsOneWidget);
   });
 

@@ -18,7 +18,8 @@ The `setmatch_shim.*` pixel helpers (`sm_rgba_to_bgr`, `sm_bgr_to_gray`,
 present and fall back to identical Dart arithmetic otherwise.
 
 The only app-side build settings are the podspec's deployment targets
-(`osx` 13.0, `ios` 15.0 — the floors current Xcode SDKs accept).
+(`osx` 13.0, `ios` 15.0 — the floors current Xcode SDKs accept) and its
+`GCC_OPTIMIZATION_LEVEL` 3 (IEEE-safe; the pixel loops vectorize).
 
 ## What is ported (Dart, `lib/src/`)
 

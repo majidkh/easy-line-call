@@ -266,11 +266,25 @@ std::vector<float> DistanceTransform(const Gray& g) {
 Bgr ResizeBilinear(const Bgr& bgr, int w, int h) {
   Bgr out{w, h, std::vector<uint8_t>(w * h * 3)};
   double sx = (double)bgr.w / w, sy = (double)bgr.h / h;
+  // The source coordinate of a column (row) is row- (column-)
+  // independent; hoist it so each is computed once instead of h (w)
+  // times. Values are reused verbatim, so the output is bit-identical.
+  std::vector<int> x0v(w), y0v(h);
+  std::vector<double> txv(w), tyv(h);
+  for (int x = 0; x < w; ++x) {
+    double fx = (x + 0.5) * sx - 0.5;
+    x0v[x] = (int)std::floor(fx);
+    txv[x] = fx - x0v[x];
+  }
+  for (int y = 0; y < h; ++y) {
+    double fy = (y + 0.5) * sy - 0.5;
+    y0v[y] = (int)std::floor(fy);
+    tyv[y] = fy - y0v[y];
+  }
   for (int y = 0; y < h; ++y)
     for (int x = 0; x < w; ++x) {
-      double fx = (x + 0.5) * sx - 0.5, fy = (y + 0.5) * sy - 0.5;
-      int x0 = (int)std::floor(fx), y0 = (int)std::floor(fy);
-      double tx = fx - x0, ty = fy - y0;
+      int x0 = x0v[x], y0 = y0v[y];
+      double tx = txv[x], ty = tyv[y];
       for (int c = 0; c < 3; ++c) {
         auto px = [&](int xx, int yy) -> double {
           xx = xx < 0 ? 0 : (xx >= bgr.w ? bgr.w - 1 : xx);

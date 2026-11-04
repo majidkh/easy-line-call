@@ -28,7 +28,7 @@ Pod::Spec.new do |s|
     'CLANG_CXX_LANGUAGE_STANDARD' => 'c++17',
     'CLANG_CXX_LIBRARY' => 'libc++',
     'HEADER_SEARCH_PATHS' => '"$(PODS_TARGET_SRCROOT)/Classes/include" "$(PODS_TARGET_SRCROOT)/Classes"',
-    'GCC_OPTIMIZATION_LEVEL' => '2',
+    'GCC_OPTIMIZATION_LEVEL' => '3',
     'EXCLUDED_ARCHS[sdk=iphonesimulator*]' => 'i386',
   }
 end

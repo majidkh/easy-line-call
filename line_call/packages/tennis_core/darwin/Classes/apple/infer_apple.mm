@@ -113,6 +113,11 @@ class CoreMLDetector : public BallDetector {
     NSUInteger nd = shape.count;
     std::vector<int> st(nd);
     for (NSUInteger i = 0; i < nd; ++i) st[i] = [strides[i] intValue];
+    // The buffer pointer and element type are loop-invariant; fetch
+    // once instead of per pixel (an ObjC call + switch each). Same
+    // values read, so the map is bit-identical.
+    void* base = heat.dataPointer;
+    const MLMultiArrayDataType dt = heat.dataType;
     std::vector<uint8_t> map(W * H, 0);
     if (folded_) {
       for (int y = 0; y < H; ++y)
@@ -122,7 +127,7 @@ class CoreMLDetector : public BallDetector {
           NSUInteger off = 0;
           for (NSUInteger d = 0; d < nd; ++d)
             off += idx[4 - nd + d] * st[d];
-          map[y * W + x] = (uint8_t)ValueAt(heat, off);
+          map[y * W + x] = (uint8_t)ScalarAt(base, dt, off);
         }
     } else {
       // Logits: argmax over the channel axis (nd-3).
@@ -137,7 +142,7 @@ class CoreMLDetector : public BallDetector {
             NSUInteger off = 0;
             for (NSUInteger d = 0; d < nd; ++d)
               off += idx[4 - nd + d] * st[d];
-            double v = ValueAt(heat, off);
+            double v = ScalarAt(base, dt, off);
             if (v > best) {
               best = v;
               bi = c;
@@ -149,9 +154,8 @@ class CoreMLDetector : public BallDetector {
     return map;
   }
 
-  static double ValueAt(MLMultiArray* a, NSUInteger off) {
-    void* p = a.dataPointer;
-    switch (a.dataType) {
+  static double ScalarAt(void* p, MLMultiArrayDataType dt, NSUInteger off) {
+    switch (dt) {
       case MLMultiArrayDataTypeInt32:
         return ((int32_t*)p)[off];
       case MLMultiArrayDataTypeFloat32:

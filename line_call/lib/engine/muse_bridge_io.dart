@@ -81,6 +81,7 @@ Future<MuseScan> museStartScan({
   required int procH,
   List<double>? hImg2Court,
   List<double>? hCourt2Img,
+  bool adaptiveStride = true,
 }) async {
   final (model, cache) = await museWarmup();
   final e = await MuseEngine.start(MuseEngineConfig(
@@ -91,6 +92,7 @@ Future<MuseScan> museStartScan({
     compileCache: cache,
     hImg2Court: hImg2Court,
     hCourt2Img: hCourt2Img,
+    adaptiveStride: adaptiveStride,
   ));
   return MuseScan._(e);
 }

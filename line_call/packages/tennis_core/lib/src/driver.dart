@@ -9,6 +9,43 @@ import 'core.dart';
 import 'recover.dart';
 import 'types.dart';
 
+/// Adaptive-stride rule (pure): is there a live rally or a recently
+/// headed chain at [frontier]? A rally counts while live or ended within
+/// [memory] frames; a non-stray track counts while its head is within
+/// [memory] frames. Dead time (no ball anywhere recently) runs the sparse
+/// watch stride instead of the dense one.
+bool rallyActiveNear(List<Rally> rallies, List<Track> tracks, int frontier,
+    {int memory = 90}) {
+  for (final r in rallies) {
+    if (r.start <= frontier && r.end >= frontier - memory) return true;
+  }
+  for (final t in tracks) {
+    if (!t.stray && t.end >= frontier - memory) return true;
+  }
+  return false;
+}
+
+/// Effective detect stride for a chunk (pure): the first chunk of a scan
+/// always runs dense so opening rallies link exactly as in fixed-stride
+/// mode; later chunks run the sparse dead-time watch unless a rally is
+/// live or a chain head is near (recovery backfills the gap from the
+/// gray ring once dense re-engages).
+int effectiveStride({
+  required bool adaptive,
+  required int stride,
+  required int sparseStride,
+  required int chunk,
+  required int lo,
+  required List<Rally> rallies,
+  required List<Track> tracks,
+  int memory = 90,
+}) {
+  if (!adaptive || lo < chunk) return stride;
+  return rallyActiveNear(rallies, tracks, lo, memory: memory)
+      ? stride
+      : sparseStride;
+}
+
 class ChunkDriver {
   final double fps;
   final int width, height; // processing size (frames must arrive at this size)
@@ -27,6 +64,15 @@ class ChunkDriver {
   final GrayRing _ring = GrayRing();
   final RoiFinder _roi = RoiFinder();
 
+  /// Sparse watch stride for dead time when [adaptiveStride] is on.
+  /// Rallies still detect at full [stride]; the sparse watch only skips
+  /// global passes while no ball is anywhere near, and the first sparse
+  /// sighting re-engages dense from the next chunk (recovery backfills
+  /// the gap from the gray ring).
+  final bool adaptiveStride;
+  final int sparseStride;
+  final int adaptiveMemory;
+
   ChunkDriver({
     required this.fps,
     required this.width,
@@ -39,7 +85,11 @@ class ChunkDriver {
     int stride = 3,
     this.recover = true,
     bool courtFilter = true,
+    this.adaptiveStride = false,
+    int sparseStride = 9,
+    this.adaptiveMemory = 90,
   })  : stride = math.max(1, stride),
+        sparseStride = math.max(2, sparseStride),
         session = StreamSession(fps, width,
             hImg2Court: hImg2Court,
             hCourt2Img: hCourt2Img,
@@ -64,20 +114,50 @@ class ChunkDriver {
     final take = math.min(_q.length, chunk);
     if (_next == 0 && take + _tail.length < 3) return false; // need a triplet
     final lo = _next;
+    // Adaptive stride: dead time (no rally, no recent chain head) runs
+    // the sparse watch; anything ball-like re-engages dense immediately.
+    // Off by default — bit-identical to fixed stride when disabled.
+    final eff = effectiveStride(
+      adaptive: adaptiveStride,
+      stride: stride,
+      sparseStride: sparseStride,
+      chunk: chunk,
+      lo: lo,
+      rallies: session.rallies,
+      tracks: session.tracks,
+      memory: adaptiveMemory,
+    );
     final frames = [for (var i = 0; i < take; i++) _q.removeFirst().$2];
     final hi = lo + take;
     final chunkImgs = [..._tail, ...frames];
     final base = lo - _tail.length;
     final newCands = <int, List<Candidate>>{};
-    if (stride > 1) {
+    if (eff > 1) {
       for (var k = 0; k < chunkImgs.length; k++) {
         final fno = base + k;
         if (fno < lo || fno >= hi) continue;
-        if (fno % stride != 0 || k < 2) continue;
+        if (fno % eff != 0 || k < 2) continue;
         final cs = detector.candidatesFor(chunkImgs.sublist(k - 2, k + 1))[2];
         if (cs.isNotEmpty) {
           newCands[fno] = cs;
           fc[fno] = cs;
+        }
+      }
+      // Sparse-watch backfill: a sighting means the ball is here NOW, so
+      // detect this chunk's skipped dense-grid frames too — the chunk
+      // then matches fixed-stride exactly. Purely empty chunks (no ball
+      // on the sparse grid) keep their savings.
+      if (eff != stride && newCands.isNotEmpty) {
+        for (var k = 0; k < chunkImgs.length; k++) {
+          final fno = base + k;
+          if (fno < lo || fno >= hi) continue;
+          if (fno % stride != 0 || fno % eff == 0 || k < 2) continue;
+          final cs =
+              detector.candidatesFor(chunkImgs.sublist(k - 2, k + 1))[2];
+          if (cs.isNotEmpty) {
+            newCands[fno] = cs;
+            fc[fno] = cs;
+          }
         }
       }
     } else {

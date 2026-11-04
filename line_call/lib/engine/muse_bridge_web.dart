@@ -25,6 +25,7 @@ Future<MuseScan> museStartScan({
   required int procH,
   List<double>? hImg2Court,
   List<double>? hCourt2Img,
+  bool adaptiveStride = true,
 }) =>
     throw UnsupportedError(museUnavailableReason);
 
