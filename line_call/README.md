@@ -26,7 +26,11 @@ toggle), whole court always, no manual court adjust, no 3D simulate view.
 
 ## Build & run
 
-From `muse2/`:
+Requires the [Flutter SDK](https://docs.flutter.dev/get-started/install)
+(stable channel) — install it first; nothing here builds without it. The
+SDK is taken from `PATH` (`FLUTTER_SDK` overrides).
+
+From the repo root:
 
 ```sh
 ./build_linecall.sh                 # macOS app, release, run it
@@ -38,8 +42,7 @@ From `muse2/`:
 
 Missing platform shells are scaffolded on first use. First build per
 platform compiles OpenCV from source via the `dartcv4` hook (one-time each,
-~10-30 min, cached under `.dart_tool/`). The SDK is taken from `PATH`
-(`FLUTTER_SDK` overrides).
+~10-30 min, cached under `.dart_tool/`).
 
 ## Layout
 

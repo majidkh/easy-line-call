@@ -16,7 +16,6 @@ class HomePage extends StatefulWidget {
 
 class _HomePageState extends State<HomePage> {
   bool _doubles = true;
-  bool _exportFilm = false;
 
   Future<void> _processVideo() async {
     try {
@@ -27,9 +26,7 @@ class _HomePageState extends State<HomePage> {
         context,
         MaterialPageRoute(
           builder: (_) => CalibratePage.video(
-              videoPath: picked.path,
-              doubles: _doubles,
-              exportFilm: _exportFilm),
+              videoPath: picked.path, doubles: _doubles),
         ),
       );
     } catch (e) {
@@ -51,9 +48,7 @@ class _HomePageState extends State<HomePage> {
             context,
             MaterialPageRoute(
               builder: (_) => CalibratePage.live(
-                  doubles: _doubles,
-                  camera: cam,
-                  exportFilm: _exportFilm),
+                  doubles: _doubles, camera: cam),
             ),
           );
         },
@@ -158,29 +153,6 @@ class _HomePageState extends State<HomePage> {
                     ],
                   ),
                   const Spacer(),
-                  // Annotated-film export: same FPS/sound, lines +
-                  // bounces + balls drawn in, written to an output/
-                  // folder.
-                  CheckboxListTile(
-                    value: _exportFilm,
-                    dense: compact,
-                    visualDensity: compact
-                        ? VisualDensity.compact
-                        : VisualDensity.standard,
-                    onChanged: (v) =>
-                        setState(() => _exportFilm = v ?? false),
-                    title: Text('Export annotated film',
-                        style: TextStyle(fontSize: labelSize)),
-                    subtitle: Text(
-                        'same quality, FPS and sound into output/',
-                        style: TextStyle(
-                            color: Colors.white70,
-                            fontSize: labelSize - 2)),
-                    controlAffinity:
-                        ListTileControlAffinity.leading,
-                    contentPadding: EdgeInsets.zero,
-                  ),
-                  SizedBox(height: compact ? 6 : 8),
                   // The two feeds.
                   SizedBox(
                     width: double.infinity,

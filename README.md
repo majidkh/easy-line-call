@@ -14,8 +14,8 @@ Copyright © 2026 Majid Khosravi. All rights reserved.
 
 ## Layout
 
-- `line_call/` — the app. Build it with `./build_linecall.sh [mac|ios|android|web]`
-  (see `line_call/README.md`).
+- `line_call/` — the app. Requires the Flutter SDK, then build it with
+  `./build_linecall.sh [mac|ios|android|web]` (see `line_call/README.md`).
 - `core/` — the C++ engine source (court fit, ball detector glue, tracking
   sessions). Shipped into the app via `line_call/packages/tennis_core`.
 - `models/` — model files (`BallHeatTurbo.mlpackage`, TrackNet weights).

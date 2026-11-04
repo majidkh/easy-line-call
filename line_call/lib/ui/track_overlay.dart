@@ -1,6 +1,6 @@
-// Shared court/track overlay painting: the live tracking view and the
-// offline annotated-video export draw the same balls, trails, detections
-// and numbered bounce rings through these mappings and painters.
+// Shared court/track overlay painting: the live tracking view draws balls,
+// trails, detections and numbered bounce rings through these mappings and
+// painters.
 import 'dart:math' as math;
 
 import 'package:flutter/material.dart';

@@ -27,8 +27,7 @@ class CourtOverlay extends StatelessWidget {
   }
 }
 
-/// Court marking painter, also used offscreen by the annotated-video
-/// export (same lines as the live view).
+/// Court marking painter for the calibrated court lines.
 class CourtMarkingPainter extends CustomPainter {
   final VlineCalibration det;
   final bool cover;

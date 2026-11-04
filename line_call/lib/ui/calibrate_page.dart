@@ -27,15 +27,11 @@ class CalibratePage extends StatefulWidget {
   final String? videoPath; // null → live camera feed
   final bool doubles; // which lines calls are judged on downstream
   final CameraDescription? camera; // live: chosen camera (null → back)
-  final bool exportFilm; // annotated-film export after tracking
   const CalibratePage.video(
-      {super.key,
-      required String this.videoPath,
-      this.doubles = true,
-      this.exportFilm = false})
+      {super.key, required String this.videoPath, this.doubles = true})
       : camera = null;
   const CalibratePage.live(
-      {super.key, this.doubles = true, this.camera, this.exportFilm = false})
+      {super.key, this.doubles = true, this.camera})
       : videoPath = null;
   bool get live => videoPath == null;
 
@@ -352,7 +348,6 @@ class _CalibratePageState extends State<CalibratePage> {
           videoPath: widget.videoPath,
           doubles: widget.doubles,
           initialCamera: _activeCamera ?? widget.camera,
-          exportFilm: widget.exportFilm,
         ),
       ),
     );

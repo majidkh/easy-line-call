@@ -16,11 +16,10 @@ import 'package:camera/camera.dart';
 import 'package:flutter/foundation.dart' show debugPrint, kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:tennis_core/types.dart'
-    show BounceCall, Candidate, MuseUpdate;
+    show BounceCall, MuseUpdate;
 import 'package:video_player/video_player.dart';
 import 'package:wakelock_plus/wakelock_plus.dart';
 
-import '../engine/film_export.dart';
 import '../engine/muse_bridge.dart';
 import '../engine/muse_court.dart';
 import '../engine/video_frames.dart';
@@ -36,21 +35,17 @@ class TrackPage extends StatefulWidget {
   final String? videoPath; // null → live camera feed
   final bool doubles; // which lines calls are judged on
   final CameraDescription? initialCamera; // live: chosen camera
-  final bool exportFilm; // write the annotated film to output/ when done
   const TrackPage(
       {super.key,
       required this.calibration,
       this.videoPath,
       this.doubles = true,
-      this.initialCamera,
-      this.exportFilm = false});
+      this.initialCamera});
   bool get live => videoPath == null;
 
   @override
   State<TrackPage> createState() => _TrackPageState();
 }
-
-enum _ExportState { idle, running, done, error }
 
 class _TrackPageState extends State<TrackPage> {
   // Scan passes frames at most this often (clips above ~60 fps are thinned).
@@ -73,17 +68,6 @@ class _TrackPageState extends State<TrackPage> {
   bool _scanDone = false;
   double _scanProgress = 0; // video only (ms / duration)
   String? _error;
-
-  // Annotated-film export (video only — live has no source film to draw
-  // on). Detections stream into [_exportCands] during the scan; the render
-  // starts once analysis completes.
-  bool get _wantExport => widget.exportFilm && !widget.live;
-  final Map<int, List<Candidate>> _exportCands = {};
-  _ExportState _exportState = _ExportState.idle;
-  double _exportProgress = 0;
-  String? _exportPath;
-  String? _exportError;
-  bool _exportCancel = false;
 
   // Video playback.
   VideoPlayerController? _player;
@@ -258,13 +242,6 @@ class _TrackPageState extends State<TrackPage> {
               'tracks=${u.tracks.length} rallies=${u.rallies.length}');
         }
         nUpdates++;
-        // Annotated export needs every frame's detections; the final
-        // update only keeps recent ones, so retain them as they stream.
-        if (_wantExport) {
-          for (final e in u.cands.entries) {
-            _exportCands[e.key] = e.value;
-          }
-        }
         setState(() => _latest = u);
       }, onError: (Object e) {
         if (!mounted) return;
@@ -303,101 +280,11 @@ class _TrackPageState extends State<TrackPage> {
       _scanProgress = 1;
       _scanDone = true;
     });
-    // The annotated film renders once analysis is complete.
-    if (_wantExport && _exportState == _ExportState.idle) {
-      _startExport();
-    }
   }
 
   void _pushScanFrame(Uint8List raw, int w, int h, double ms) {
     _scanMs.add(ms < 0 ? _scanMs.length * 1000 / _scanFps : ms);
     _scan?.push(raw, w, h);
-  }
-
-  // --------------------------------------------------- annotated-film export
-  Future<void> _startExport() async {
-    final u = _latest;
-    final src = widget.videoPath;
-    if (u == null || src == null) return;
-    setState(() {
-      _exportState = _ExportState.running;
-      _exportProgress = 0;
-      _exportError = null;
-      _exportCancel = false;
-    });
-    try {
-      final payload = buildExportPayload(
-        calibration: widget.calibration,
-        doubles: widget.doubles,
-        procW: _procW,
-        procH: _procH,
-        scanMs: _scanMs,
-        bounces: _bounces,
-        tracks: u.tracks,
-        cands: _exportCands,
-      );
-      final path = await runExport(
-        videoPath: src,
-        payload: payload,
-        onProgress: (p) {
-          if (mounted) setState(() => _exportProgress = p);
-        },
-        isCancelled: () => _exportCancel,
-      );
-      if (!mounted) return;
-      setState(() {
-        _exportState = _ExportState.done;
-        _exportPath = path;
-      });
-    } catch (e) {
-      if (!mounted) return;
-      setState(() {
-        _exportState = _ExportState.error;
-        _exportError = '$e';
-      });
-    }
-  }
-
-  Widget _exportRow() {
-    switch (_exportState) {
-      case _ExportState.idle:
-        return const SizedBox.shrink();
-      case _ExportState.running:
-        final pct = (_exportProgress * 100).round();
-        return Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            Row(
-              children: [
-                Expanded(
-                  child: Text('Exporting film… $pct%',
-                      style: const TextStyle(
-                          color: Colors.white70, fontSize: 13)),
-                ),
-                InkWell(
-                  onTap: () =>
-                      setState(() => _exportCancel = true),
-                  child: const Padding(
-                    padding: EdgeInsets.all(4),
-                    child: Icon(Icons.close,
-                        size: 16, color: Colors.white70),
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 4),
-            LinearProgressIndicator(value: _exportProgress),
-          ],
-        );
-      case _ExportState.done:
-        return Text('Film saved ✓\n${_exportPath ?? ''}',
-            style: const TextStyle(
-                color: Colors.greenAccent, fontSize: 12));
-      case _ExportState.error:
-        return Text('Export failed: ${_exportError ?? ''}',
-            style: const TextStyle(
-                color: Colors.redAccent, fontSize: 12));
-    }
   }
 
   // ------------------------------------------------------------ live camera
@@ -704,12 +591,6 @@ class _TrackPageState extends State<TrackPage> {
                           color: Colors.white70,
                           fontSize: 12,
                           shadows: [_shadow])),
-                ),
-              if (_wantExport)
-                Padding(
-                  padding: const EdgeInsets.only(
-                      left: 8, right: 8, top: 6),
-                  child: _exportRow(),
                 ),
               const Spacer(flex: 1),
             ],
