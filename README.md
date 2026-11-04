@@ -8,6 +8,10 @@ Author: Majid Khosravi
 
 Copyright © 2026 Majid Khosravi. All rights reserved.
 
+## Demo
+
+[![Easy Line Call demo](https://img.youtube.com/vi/TYcUK3Q8nB0/maxresdefault.jpg)](https://www.youtube.com/watch?v=TYcUK3Q8nB0)
+
 ## Layout
 
 - `line_call/` — the app. Build it with `./build_linecall.sh [mac|ios|android|web]`
