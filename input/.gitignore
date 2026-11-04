@@ -1,0 +1,4 @@
+# Local test videos — never committed (large binaries).
+# Only this .gitignore itself is tracked, so the folder exists in git.
+*
+!.gitignore

@@ -1,0 +1,167 @@
+[
+ {
+  "case": 0,
+  "tag": "t183_gap237",
+  "frame": 237,
+  "pred": [
+   80,
+   80
+  ],
+  "radius": 80,
+  "found": true
+ },
+ {
+  "case": 1,
+  "tag": "t183_gap250",
+  "frame": 250,
+  "pred": [
+   80,
+   80
+  ],
+  "radius": 80,
+  "found": true
+ },
+ {
+  "case": 2,
+  "tag": "t183_gap268",
+  "frame": 268,
+  "pred": [
+   80,
+   80
+  ],
+  "radius": 80,
+  "found": true
+ },
+ {
+  "case": 3,
+  "tag": "t183_gap463",
+  "frame": 463,
+  "pred": [
+   80,
+   80
+  ],
+  "radius": 80,
+  "found": true
+ },
+ {
+  "case": 4,
+  "tag": "t183_gap515",
+  "frame": 515,
+  "pred": [
+   80,
+   80
+  ],
+  "radius": 80,
+  "found": true
+ },
+ {
+  "case": 5,
+  "tag": "t885_gap949",
+  "frame": 949,
+  "pred": [
+   80,
+   80
+  ],
+  "radius": 80,
+  "found": true
+ },
+ {
+  "case": 6,
+  "tag": "t885_gap979",
+  "frame": 979,
+  "pred": [
+   80,
+   80
+  ],
+  "radius": 80,
+  "found": true
+ },
+ {
+  "case": 7,
+  "tag": "t486_gap507",
+  "frame": 507,
+  "pred": [
+   80,
+   80
+  ],
+  "radius": 80,
+  "found": true
+ },
+ {
+  "case": 8,
+  "tag": "t183_gap237_neg",
+  "frame": 237,
+  "pred": [
+   80,
+   80
+  ],
+  "radius": 80,
+  "found": false
+ },
+ {
+  "case": 9,
+  "tag": "t183_gap250_neg",
+  "frame": 250,
+  "pred": [
+   80,
+   80
+  ],
+  "radius": 80,
+  "found": false
+ },
+ {
+  "case": 10,
+  "tag": "t183_gap268_neg",
+  "frame": 268,
+  "pred": [
+   80,
+   80
+  ],
+  "radius": 80,
+  "found": false
+ },
+ {
+  "case": 11,
+  "tag": "t183_gap463_neg",
+  "frame": 463,
+  "pred": [
+   80,
+   80
+  ],
+  "radius": 80,
+  "found": false
+ },
+ {
+  "case": 12,
+  "tag": "t183_p285_shirt",
+  "frame": 285,
+  "pred": [
+   80,
+   80
+  ],
+  "radius": 80,
+  "found": false
+ },
+ {
+  "case": 13,
+  "tag": "bounce464_gap465",
+  "frame": 465,
+  "pred": [
+   80,
+   80
+  ],
+  "radius": 80,
+  "found": true
+ },
+ {
+  "case": 14,
+  "tag": "bounce464_gap459",
+  "frame": 459,
+  "pred": [
+   80,
+   80
+  ],
+  "radius": 80,
+  "found": true
+ }
+]

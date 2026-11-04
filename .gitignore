@@ -1,0 +1,28 @@
+# ============ easy-line-call: root ignores ============
+# line_call/ has its own Flutter .gitignore and input/ has its own too
+# (test videos stay local). This file covers the repo root, core/
+# and models/, plus cross-platform noise.
+
+# --- macOS ---
+.DS_Store
+.AppleDouble
+.LSOverride
+._*
+
+# --- C++ engine (core/) build output ---
+core/build/
+cmake-build-*/
+
+# --- Python helpers (core/tools/) ---
+__pycache__/
+*.py[cod]
+.venv/
+
+# --- Model weights: downloaded, not committed (see models/README.md) ---
+models/*.pt
+
+# --- Xcode direct-build output (Flutter builds go to line_call/build/) ---
+line_call/ios/build/
+
+# --- Logs ---
+*.log

@@ -1,0 +1,54 @@
+name: line_call
+description: "Tennis line calling — court calibration, ball tracking, IN/OUT calls."
+publish_to: 'none'
+version: 1.0.0+1
+
+environment:
+  sdk: ^3.10.4
+
+dependencies:
+  flutter:
+    sdk: flutter
+
+  camera: ^0.11.0+2
+  image_picker: ^1.1.2
+  video_player: ^2.9.5
+  video_thumbnail: ^0.5.3
+  opencv_dart: ^2.2.1
+  wakelock_plus: ^1.6.1
+  flutter_litert: ^3.1.1
+  path_provider: ^2.1.5
+  web: ^1.1.1
+  image: ^4.2.0 # JPEG encode for the live challenge buffer (pure Dart)
+  # muse2 engine (vendored C++ core + Core ML TrackNet): court calibration,
+  # ball tracking and bounce calls. macOS/iOS only (FFI plugin).
+  tennis_core:
+    path: packages/tennis_core
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^6.0.0
+  camera_platform_interface: ^2.15.0 # fake dual camera in drive_test.dart
+  integration_test:
+    sdk: flutter
+
+dependency_overrides:
+  # Vendored copy with the Apple deployment-target fix (see
+  # packages/dartcv4/VENDORED.md). Drop once opencv_dart resolves a fixed
+  # upstream dartcv4 with this Flutter SDK.
+  dartcv4:
+    path: packages/dartcv4
+
+flutter:
+  uses-material-design: true
+
+  assets:
+    - assets/models/esrgan.tflite
+    # ANE ball detector (.mlpackage is a directory: list each level)
+    - assets/models/BallHeatANE.mlpackage/
+    - assets/models/BallHeatANE.mlpackage/Data/com.apple.CoreML/
+    - assets/models/BallHeatANE.mlpackage/Data/com.apple.CoreML/weights/
+    # 6s rally-3 slice for integration_test/drive_test.dart (the macOS test
+    # app is sandboxed and cannot read the repo's input/ folder).
+    - assets/test/clip_6s.mp4
