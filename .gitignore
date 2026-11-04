@@ -1,7 +1,7 @@
 # ============ easy-line-call: root ignores ============
-# line_call/ has its own Flutter .gitignore and input/ has its own too
-# (test videos stay local). This file covers the repo root, core/
-# and models/, plus cross-platform noise.
+# line_call/ has its own Flutter .gitignore; input/ test videos are
+# committed. This file covers the repo root, core/ and models/,
+# plus cross-platform noise.
 
 # --- macOS ---
 .DS_Store
